@@ -13,12 +13,12 @@
       </a-col>
     </a-row>
     <a-row :gutter="20" style="width: 66%;margin: 0 auto;margin-bottom: 15px">
-      <a-col :span="18">
+      <a-col :span="17">
         <a-carousel effect="fade">
           <div style="width: 100%;height: 550px" v-for="(item, index) in homeImage" :key="index"><img :src="'http://127.0.0.1:9527/imagesWeb/' + item" style="width: 100%;height: 100%;object-fit:cover;" /></div>
         </a-carousel>
       </a-col>
-      <a-col :span="6">
+      <a-col :span="7">
         <a-card hoverable :loading="loading" :bordered="false" title="景区推荐" style="height: 550px;overflow: auto">
           <div style="padding: 0 22px">
             <a-list item-layout="vertical" :pagination="false" :data-source="bulletinList">
@@ -81,7 +81,7 @@
         <a-tabs :activeKey="tabKey" tab-position="top" @change="tabChange" v-show="!postDetailShow">
           <a-tab-pane v-for="item in tagList" :key="item.id" :tab="item.name">
             <a-skeleton active v-if="loading" />
-            <div v-if="!loading" style="padding: 25px 80px">
+            <div v-if="!loading">
               <a-list item-layout="vertical" size="large" :pagination="pagination" :data-source="postList">
                 <a-list-item slot="renderItem" key="item.title" slot-scope="item, index">
                   <template slot="actions">
@@ -122,7 +122,7 @@
           <div style="margin: 25px 50px;font-size: 13px">
             <a-icon v-if="collectUser === 0" type="heart" style="margin-right: 10px;cursor: pointer" @click="collectUserCheck(0)"/>
             <a-icon v-if="collectUser > 0" type="heart" style="margin-right: 10px;color: red;cursor: pointer" @click="collectUserCheck(1)"/>
-            {{ postDetail.username }} 关注
+            <a @click="pushToDetail(postDetail.userId)">{{ postDetail.username }}</a> 关注
             <a-divider type="vertical" />
             <a-icon type="eye" style="margin-right: 10px;margin-left: 40px" />
             {{ postDetail.pageviews }} 访问
@@ -162,7 +162,7 @@
               :data-source="replyList"
             >
               <a-list-item slot="renderItem" slot-scope="item, index">
-                <a-comment :author="item.username" shape="square" :avatar="'http://127.0.0.1:9527/imagesWeb/' + item.images">
+                <a-comment :author="item.username" shape="square" :avatar="'http://127.0.0.1:9527/imagesWeb/' + item.images" @click="pushToDetail(item.userId)">
                   <template slot="actions">
                     <span @click="replyUserAdd(item)">回复</span>
                   </template>
@@ -267,7 +267,7 @@ export default {
       postEdit: {
         visiable: false
       },
-      homeImage: ['SA1679123854527.jpg'],
+      homeImage: ['SA1767408413573.jpg'],
       bulletinList: [],
       orderView: {
         visiable: false,
@@ -292,6 +292,14 @@ export default {
     }
   },
   methods: {
+    pushToDetail (userId) {
+      this.$router.push({
+        path: '/userDetail',
+        query: {
+          id: userId
+        }
+      })
+    },
     selectHomeImages () {
       this.$get(`/cos/home-info/data`).then((r) => {
         this.homeImage = r.data.home.images.split(',')
@@ -588,105 +596,290 @@ export default {
 }
 </script>
 <style lang="less">
-  .home-page {
-    .head-info {
-      margin-bottom: .5rem;
-      .head-info-card {
-        padding: .5rem;
-        border-color: #f1f1f1;
-        .head-info-avatar {
-          display: inline-block;
-          float: left;
-          margin-right: 1rem;
-          img {
-            width: 5rem;
-            border-radius: 2px;
-          }
+.home-page {
+  background: linear-gradient(135deg, #e9f8e7 0%, #d4f1d1 100%);
+  min-height: 100vh;
+  padding: 20px 0;
+
+  // 卡片统一美化
+  .ant-card {
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    border: none;
+  }
+
+  // 轮播图样式优化
+  .ant-carousel {
+    .slick-slide {
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    img {
+      transition: transform 0.3s ease;
+      &:hover {
+        transform: scale(1.02);
+      }
+    }
+  }
+
+  // 景区推荐卡片
+  .scenic-recommend-card {
+    height: 550px;
+    overflow-y: auto;
+
+    .ant-card-head {
+      background: linear-gradient(90deg, #4CAF50, #8BC34A);
+      color: white;
+      border-radius: 12px 12px 0 0;
+      .ant-card-head-title {
+        color: white;
+        font-weight: bold;
+      }
+    }
+  }
+
+  // 头部信息区域
+  .head-info {
+    margin-bottom: 1.5rem;
+    .head-info-card {
+      background: linear-gradient(135deg, #ffffff 0%, #f8fdf7 100%);
+      border-radius: 12px;
+      padding: 1.5rem;
+      border: 1px solid #e8f5e9;
+
+      .head-info-welcome {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #2e7d32;
+        margin-bottom: 0.5rem;
+      }
+
+      .head-info-desc {
+        color: #66bb6a;
+        font-size: 0.9rem;
+        padding: 0.3rem 0;
+      }
+
+      .head-info-time {
+        color: #81c784;
+        font-size: 0.85rem;
+        padding: 0.3rem 0;
+      }
+    }
+  }
+
+  // 统计信息区域
+  .count-info {
+    .head-info-card {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 1.5rem;
+      border: 1px solid rgba(232, 245, 233, 0.5);
+    }
+
+    // 搜索框美化
+    .ant-input-search {
+      .ant-input {
+        border-radius: 20px;
+        border: 1px solid #c8e6c9;
+        &:focus {
+          border-color: #4CAF50;
+          box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
         }
-        .head-info-count {
-          display: inline-block;
-          float: left;
-          .head-info-welcome {
-            font-size: 1.05rem;
-            margin-bottom: .1rem;
-          }
-          .head-info-desc {
-            color: rgba(0, 0, 0, 0.45);
-            font-size: .8rem;
-            padding: .2rem 0;
-            p {
-              margin-bottom: 0;
+      }
+      .ant-input-search-button {
+        border-radius: 20px;
+        background: #4CAF50;
+        border-color: #4CAF50;
+      }
+    }
+
+    // 标签页美化
+    .ant-tabs {
+      .ant-tabs-tab {
+        padding: 12px 16px !important;
+        border-radius: 6px;
+        margin-right: 8px;
+        transition: all 0.3s;
+        &:hover {
+          background: #e8f5e9;
+        }
+      }
+      .ant-tabs-tab-active {
+        background: #e8f5e9;
+        color: #4CAF50;
+        font-weight: 500;
+        border: 1px solid #c8e6c9;
+      }
+      .ant-tabs-ink-bar {
+        background: #4CAF50;
+      }
+    }
+
+    // 列表项美化
+    .ant-list-item {
+      padding: 1.2rem 1.5rem !important;
+      border-bottom: 1px solid #f0f0f0;
+      transition: all 0.3s;
+      border-radius: 8px;
+      margin-bottom: 12px;
+
+      &:hover {
+        background: #f1f8e9;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+      }
+
+      .ant-list-item-action {
+        li {
+          span {
+            display: flex;
+            align-items: center;
+            color: #66bb6a;
+            font-size: 0.9rem;
+
+            .anticon {
+              margin-right: 5px;
             }
           }
-          .head-info-time {
-            color: rgba(0, 0, 0, 0.45);
-            font-size: .8rem;
-            padding: .2rem 0;
+        }
+      }
+
+      .ant-list-item-meta-title {
+        a {
+          color: #2e7d32;
+          font-weight: 500;
+          font-size: 1.1rem;
+          transition: color 0.3s;
+
+          &:hover {
+            color: #4CAF50;
+          }
+        }
+      }
+
+      .ant-list-item-meta-description {
+        color: #757575;
+        line-height: 1.6;
+      }
+    }
+  }
+
+  // 帖子详情页面
+  .post-detail-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+
+    .post-title {
+      font-size: 1.8rem;
+      color: #1b5e20;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      line-height: 1.4;
+    }
+
+    .post-meta {
+      background: #f5fbf5;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      border-left: 4px solid #4CAF50;
+
+      .meta-item {
+        display: inline-flex;
+        align-items: center;
+        margin-right: 1.5rem;
+        color: #66bb6a;
+
+        .anticon {
+          margin-right: 8px;
+        }
+      }
+    }
+
+    .post-content {
+      font-size: 1.05rem;
+      line-height: 1.8;
+      color: #424242;
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: #fafafa;
+      border-radius: 8px;
+      border-left: 4px solid #81c784;
+    }
+
+    // 评论区域
+    .comment-list {
+      .ant-list-header {
+        background: #e8f5e9;
+        border-radius: 8px 8px 0 0;
+        font-weight: 500;
+        color: #2e7d32;
+      }
+
+      .ant-comment {
+        padding: 1rem 0;
+        border-bottom: 1px solid #eee;
+
+        .ant-comment-content {
+          background: #f1f8e9;
+          padding: 1rem;
+          border-radius: 8px;
+
+          .ant-comment-author-time {
+            color: #9e9e9e;
+            font-size: 0.85rem;
           }
         }
       }
     }
-    .count-info {
-      .visit-count-wrapper {
-        padding-left: 0 !important;
-        .visit-count {
-          padding: .5rem;
-          border-color: #f1f1f1;
-          .ant-card-body {
-            padding: .5rem 1rem !important;
-          }
-        }
-      }
-      .project-wrapper {
-        padding-right: 0 !important;
-        .project-card {
-          border: none !important;
-          .ant-card-head {
-            border-left: 1px solid #f1f1f1 !important;
-            border-top: 1px solid #f1f1f1 !important;
-            border-right: 1px solid #f1f1f1 !important;
-          }
-          .ant-card-body {
-            padding: 0 !important;
-            table {
-              width: 100%;
-              td {
-                width: 50%;
-                border: 1px solid #f1f1f1;
-                padding: .6rem;
-                .project-avatar-wrapper {
-                  display:inline-block;
-                  float:left;
-                  margin-right:.7rem;
-                  .project-avatar {
-                    color: #42b983;
-                    background-color: #d6f8b8;
-                  }
-                }
-              }
-            }
-          }
-          .project-detail {
-            display:inline-block;
-            float:left;
-            text-align:left;
-            width: 78%;
-            .project-name {
-              font-size:.9rem;
-              margin-top:-2px;
-              font-weight:600;
-            }
-            .project-desc {
-              color:rgba(0, 0, 0, 0.45);
-              p {
-                margin-bottom:0;
-                font-size:.6rem;
-                white-space:normal;
-              }
-            }
-          }
+
+    // 回复框
+    .reply-section {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: #f1f8e9;
+      border-radius: 8px;
+
+      .ant-btn-primary {
+        background: #4CAF50;
+        border-color: #4CAF50;
+        border-radius: 6px;
+        &:hover {
+          background: #43a047;
+          border-color: #43a047;
         }
       }
     }
   }
+
+  // 按钮统一美化
+  .ant-btn {
+    border-radius: 6px;
+    font-weight: 500;
+
+    &.ant-btn-primary {
+      background: #4CAF50;
+      border-color: #4CAF50;
+      &:hover {
+        background: #43a047;
+        border-color: #43a047;
+      }
+    }
+  }
+
+  // 提示框美化
+  .ant-alert {
+    border-radius: 8px;
+    border: none;
+    background: rgba(76, 175, 80, 0.1);
+    .ant-alert-message {
+      font-weight: 500;
+      color: #2e7d32;
+    }
+  }
+}
 </style>

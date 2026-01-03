@@ -109,6 +109,15 @@ public class TreeUtil {
         router.setMeta(new RouterMeta(true, false));
         topRoutes.add(router);
 
+
+        router = new VueRouter<>();
+        router.setPath("/userDetail");
+        router.setName("用户中心");
+        router.setComponent("userDetail/UserDetail");
+        router.setIcon("none");
+        router.setMeta(new RouterMeta(true, false));
+        topRoutes.add(router);
+
         ArrayList<VueRouter<T>> list = new ArrayList<>();
         VueRouter<T> root = new VueRouter<>();
         root.setName("主页");

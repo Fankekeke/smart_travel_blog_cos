@@ -77,6 +77,7 @@
           </template>
         </template>
         <template slot="operation" slot-scope="text, record">
+          <a-icon v-if="record.aiRemark" type="file-text" @click="showDetail(record)" title="详 情" style="margin-right: 10px"></a-icon>
           <a-icon v-if="record.deleteFlag == 1" type="caret-up" @click="auditDelete(record)" title="up" style="margin-right: 10px"></a-icon>
           <a-icon type="setting" theme="twoTone" twoToneColor="#4a9ff5" @click="edit(record)" title="修 改"></a-icon>
         </template>
@@ -96,6 +97,29 @@
       :postEditVisiable="postEdit.visiable"
       :tagList="tagListData">
     </post-edit>
+    <a-modal
+      title="AI分析详情"
+      :visible="detailVisible"
+      :footer="null"
+      @cancel="detailVisible = false"
+      width="500px"
+      :body-style="{ padding: '0' }"
+      class="ai-detail-modal"
+    >
+      <div v-if="currentRecord" class="ai-detail-content">
+        <div class="ai-detail-header">
+          <h3 class="ai-detail-title">{{ currentRecord.title }}</h3>
+        </div>
+        <div class="ai-detail-body">
+          <div class="ai-result-section">
+            <div class="ai-result-label">AI分析结果:</div>
+            <div class="ai-result-content">
+              {{ currentRecord.aiRemark }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </a-modal>
   </a-card>
 </template>
 
@@ -135,7 +159,9 @@ export default {
         showTotal: (total, range) => `显示 ${range[0]} ~ ${range[1]} 条记录，共 ${total} 条记录`
       },
       tagList: [],
-      tagListData: []
+      tagListData: [],
+      detailVisible: false,
+      currentRecord: null
     }
   },
   computed: {
@@ -229,6 +255,10 @@ export default {
     this.getTagList()
   },
   methods: {
+    showDetail (record) {
+      this.currentRecord = record
+      this.detailVisible = true
+    },
     auditDelete (row) {
       row.deleteFlag = 0
       this.$put('/cos/post-info', row).then((r) => {
@@ -381,4 +411,98 @@ export default {
 </script>
 <style lang="less" scoped>
 @import "../../../../static/less/Common";
+.ai-detail-modal {
+  .ant-modal-content {
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .ant-modal-header {
+    background: linear-gradient(135deg, #4CAF50, #2E7D32);
+    color: white;
+    border-radius: 8px 8px 0 0;
+
+    .ant-modal-title {
+      color: white;
+      font-weight: 600;
+    }
+  }
+
+  .ant-modal-close-x {
+    color: white;
+  }
+}
+
+.ai-detail-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.ai-detail-header {
+  padding: 20px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.ai-detail-title {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.ai-detail-body {
+  padding: 20px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.ai-result-section {
+  margin-bottom: 15px;
+}
+
+.ai-result-label {
+  font-weight: 600;
+  color: #4CAF50;
+  margin-bottom: 10px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 16px;
+    background: #4CAF50;
+    margin-right: 8px;
+    border-radius: 2px;
+  }
+}
+
+.ai-result-content {
+  background: #f9f9f9;
+  padding: 15px;
+  border-radius: 1px;
+  border-left: 4px solid #4CAF50;
+  line-height: 1.6;
+  color: #555;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+
+  &:hover {
+    background: #f0f0f0;
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .ai-detail-modal {
+    width: 90% !important;
+  }
+}
 </style>

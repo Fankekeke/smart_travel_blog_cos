@@ -24,17 +24,26 @@ public interface PostInfoMapper extends BaseMapper<PostInfo> {
      */
     IPage<LinkedHashMap<String, Object>> selectUserPage(Page page, @Param("user") User user);
 
+    // 根据用户获取贴子
+    List<LinkedHashMap<String, Object>> queryPostByUser(@Param("userId") Integer userId);
+
     // 分页获取帖子信息
     IPage<LinkedHashMap<String, Object>> postInfoByPage(Page page, @Param("postInfo") PostInfo postInfo);
 
     // 获取模块下的贴子
     List<LinkedHashMap<String, Object>> getPostByTag(@Param("tagId") Integer tagId);
 
+    // 获取模块下的贴子
+    List<LinkedHashMap<String, Object>> getPostByTagUser(@Param("tagId") Integer tagId, @Param("userId") Integer userId);
+
     // 获取贴子详细信息
     LinkedHashMap<String, Object> postDetail(@Param("postId") Integer postId);
 
     // 模糊查询帖子信息
     List<LinkedHashMap<String, Object>> postByKey(@Param("key") String key);
+
+    // 模糊查询帖子信息
+    List<LinkedHashMap<String, Object>> listByUser(@Param("key") String key, @Param("userId") Integer userId);
 
     // 推荐贴子
     List<LinkedHashMap<String, Object>> recommend(@Param("tagId") Integer tagId, @Param("collectUserIds") String collectUserIds);

@@ -62,6 +62,8 @@ public class PostInfo implements Serializable {
      */
     private Integer deleteFlag;
 
+    private String aiRemark;
+
     @TableField(exist = false)
     private String username;
 

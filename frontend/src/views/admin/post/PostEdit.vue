@@ -10,8 +10,8 @@
     </template>
     <a-form :form="form" layout="vertical">
       <a-row :gutter="20">
-        <a-col :span="12">
-          <a-form-item label='公告标题' v-bind="formItemLayout">
+        <a-col :span="24">
+          <a-form-item label='文章标题' v-bind="formItemLayout">
             <a-input v-decorator="[
             'title',
             { rules: [{ required: true, message: '请输入名称!' }] }

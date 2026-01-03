@@ -10,6 +10,7 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.github.houbb.sensitive.word.core.SensitiveWordHelper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,6 +76,9 @@ public class ReplyInfoController {
     @Transactional(rollbackFor = Exception.class)
     public R save(ReplyInfo replyInfo) {
         String check = this.contentCheck(replyInfo.getContent());
+        if (SensitiveWordHelper.contains(replyInfo.getContent())) {
+            replyInfo.setContent(SensitiveWordHelper.replace(replyInfo.getContent()));
+        }
         if (StrUtil.isNotEmpty(check)) {
             return R.error(500, check);
         } {
