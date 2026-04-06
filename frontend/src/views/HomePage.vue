@@ -47,10 +47,13 @@
             <div class="head-info-welcome">
               {{welcomeMessage}}
             </div>
-            <div class="head-info-desc">
+            <div class="head-info-desc" v-if="user.userId">
               <p>{{user.roleName ? user.roleName : '暂无角色'}}</p>
             </div>
-            <div class="head-info-time">上次登录时间：{{user.lastLoginTime ? user.lastLoginTime : '第一次访问系统'}}</div>
+            <div class="head-info-desc" v-else>
+              <p><router-link to="/login">登录</router-link> 后可发帖、评论与收藏</p>
+            </div>
+            <div class="head-info-time" v-if="user.userId">上次登录时间：{{user.lastLoginTime ? user.lastLoginTime : '第一次访问系统'}}</div>
           </div>
         </a-col>
         <a-col :span="12">
@@ -60,9 +63,11 @@
               <a-col :span="4"></a-col>
               <a-col :span="4"></a-col>
               <a-col :span="4"></a-col>
-              <a-col :span="4"></a-col>
-              <a-col :span="4">
-                <a-button type="primary" @click="add">
+              <a-col :span="8">
+                <a-button type="default" v-if="user.userId" style="margin-right: 8px;display: inline" @click="goManage">
+                  进入后台
+                </a-button>
+                <a-button type="primary" v-if="user.userId && user.roleId != 76" @click="add" style="margin-right: 8px;display: inline">
                   发帖子
                 </a-button>
               </a-col>
@@ -120,8 +125,8 @@
             <a-icon type="form" style="cursor: pointer" v-if="user.userId === postDetail.userId" @click="edit(postDetail)"/>
           </p>
           <div style="margin: 25px 50px;font-size: 13px">
-            <a-icon v-if="collectUser === 0" type="heart" style="margin-right: 10px;cursor: pointer" @click="collectUserCheck(0)"/>
-            <a-icon v-if="collectUser > 0" type="heart" style="margin-right: 10px;color: red;cursor: pointer" @click="collectUserCheck(1)"/>
+            <a-icon v-if="user.userId && user.roleId != 76 && collectUser === 0" type="heart" style="margin-right: 10px;cursor: pointer" @click="collectUserCheck(0)"/>
+            <a-icon v-if="user.userId && user.roleId != 76 && collectUser > 0" type="heart" style="margin-right: 10px;color: red;cursor: pointer" @click="collectUserCheck(1)"/>
             <a @click="pushToDetail(postDetail.userId)">{{ postDetail.username }}</a> 关注
             <a-divider type="vertical" />
             <a-icon type="eye" style="margin-right: 10px;margin-left: 40px" />
@@ -131,8 +136,8 @@
             <span v-if="postDetail.collect === 0">{{ postDetail.reply }}</span>
             <span v-else>{{ postDetail.reply / postDetail.collect }}</span> 回复
             <a-divider type="vertical" />
-            <a-icon v-if="collectPost === 0" type="star" style="margin-right: 10px;cursor: pointer" @click="collectPostCheck(0)"/>
-            <a-icon v-if="collectPost > 0" type="star" style="margin-right: 10px;color: red;cursor: pointer" @click="collectPostCheck(1)"/>
+            <a-icon v-if="user.userId && user.roleId != 76 && collectPost === 0" type="star" style="margin-right: 10px;cursor: pointer" @click="collectPostCheck(0)"/>
+            <a-icon v-if="user.userId && user.roleId != 76 && collectPost > 0" type="star" style="margin-right: 10px;color: red;cursor: pointer" @click="collectPostCheck(1)"/>
             {{ postDetail.collect }} 收藏
             <a-divider type="vertical" />
             {{ timeFormat(postDetail.createDate) }}
@@ -175,7 +180,7 @@
                 </a-comment>
               </a-list-item>
             </a-list>
-            <div style="margin-bottom: 200px;margin-top: 50px">
+            <div style="margin-bottom: 200px;margin-top: 50px" v-if="user.userId && user.roleId != 76">
               <a-textarea
                 v-model="replyContent"
                 placeholder="Controlled autosize"
@@ -288,6 +293,9 @@ export default {
       user: state => state.account.user
     }),
     avatar () {
+      if (!this.user || !this.user.avatar) {
+        return ''
+      }
       return `static/avatar/${this.user.avatar}`
     }
   },
@@ -299,6 +307,9 @@ export default {
           id: userId
         }
       })
+    },
+    goManage () {
+      this.$router.push('/center')
     },
     selectHomeImages () {
       this.$get(`/cos/home-info/data`).then((r) => {
@@ -316,6 +327,9 @@ export default {
       this.orderView.visiable = false
     },
     recommendList () {
+      if (!this.user || !this.user.userId) {
+        return
+      }
       this.loading = true
       this.$get(`/cos/post-info/recommend/${this.user.userId}`).then((r) => {
         this.postList = r.data.data
@@ -337,6 +351,11 @@ export default {
       })
     },
     collectByUser (postId) {
+      if (!this.user || !this.user.userId) {
+        this.collectPost = 0
+        this.collectUser = 0
+        return
+      }
       this.$get(`/cos/post-info/collcet`, {userId: this.user.userId, postId}).then((r) => {
         this.collectPost = r.data.collect
         this.collectUser = r.data.focus
@@ -387,7 +406,14 @@ export default {
         }
       }
       if (key === -1) {
-        this.recommendList()
+        if (this.user && this.user.userId) {
+          this.recommendList()
+        } else if (this.tagList.length > 1) {
+          this.getPostList(this.tagList[1].id)
+        } else {
+          this.postList = []
+          this.loading = false
+        }
       }
     },
     imagesInit (images) {
@@ -424,7 +450,14 @@ export default {
         this.tagList.push.apply(this.tagList, r.data.data)
         console.log(this.tagList)
         if (this.tagList.length !== 0) {
-          this.tabChange(this.tagList[0].id)
+          if (this.user && this.user.userId) {
+            this.tabChange(this.tagList[0].id)
+          } else if (this.tagList.length > 1) {
+            this.tabChange(this.tagList[1].id)
+          } else {
+            this.postList = []
+            this.loading = false
+          }
         }
         let tagListData = []
         r.data.data.forEach(item => {
@@ -437,7 +470,8 @@ export default {
       const date = new Date()
       const hour = date.getHours()
       let time = hour < 6 ? '早上好' : (hour <= 11 ? '上午好' : (hour <= 13 ? '中午好' : (hour <= 18 ? '下午好' : '晚上好')))
-      return `${time}，${this.user.username}`
+      const name = (this.user && this.user.username) ? this.user.username : '游客'
+      return `${time}，${name}`
     },
     timeFormat (time) {
       var nowTime = new Date()
@@ -553,45 +587,47 @@ export default {
     this.getTagList()
     this.getNewList()
     this.welcomeMessage = this.welcome()
-    this.$get(`index/${this.user.username}`).then((r) => {
-      let data = r.data.data
-      this.todayIp = data.todayIp
-      this.todayVisitCount = data.todayVisitCount
-      this.totalVisitCount = data.totalVisitCount
-      let sevenVisitCount = []
-      let dateArr = []
-      for (let i = 6; i >= 0; i--) {
-        let time = moment().subtract(i, 'days').format('MM-DD')
-        let contain = false
-        for (let o of data.lastSevenVisitCount) {
-          if (o.days === time) {
-            contain = true
-            sevenVisitCount.push(o.count)
+    if (this.user && this.user.username) {
+      this.$get(`index/${this.user.username}`).then((r) => {
+        let data = r.data.data
+        this.todayIp = data.todayIp
+        this.todayVisitCount = data.todayVisitCount
+        this.totalVisitCount = data.totalVisitCount
+        let sevenVisitCount = []
+        let dateArr = []
+        for (let i = 6; i >= 0; i--) {
+          let time = moment().subtract(i, 'days').format('MM-DD')
+          let contain = false
+          for (let o of data.lastSevenVisitCount) {
+            if (o.days === time) {
+              contain = true
+              sevenVisitCount.push(o.count)
+            }
+          }
+          if (!contain) {
+            sevenVisitCount.push(0)
+          }
+          dateArr.push(time)
+        }
+        let sevenUserVistCount = []
+        for (let i = 6; i >= 0; i--) {
+          let time = moment().subtract(i, 'days').format('MM-DD')
+          let contain = false
+          for (let o of data.lastSevenUserVisitCount) {
+            if (o.days === time) {
+              contain = true
+              sevenUserVistCount.push(o.count)
+            }
+          }
+          if (!contain) {
+            sevenUserVistCount.push(0)
           }
         }
-        if (!contain) {
-          sevenVisitCount.push(0)
-        }
-        dateArr.push(time)
-      }
-      let sevenUserVistCount = []
-      for (let i = 6; i >= 0; i--) {
-        let time = moment().subtract(i, 'days').format('MM-DD')
-        let contain = false
-        for (let o of data.lastSevenUserVisitCount) {
-          if (o.days === time) {
-            contain = true
-            sevenUserVistCount.push(o.count)
-          }
-        }
-        if (!contain) {
-          sevenUserVistCount.push(0)
-        }
-      }
-    }).catch((r) => {
-      console.error(r)
-      this.$message.error('获取首页信息失败')
-    })
+      }).catch((r) => {
+        console.error(r)
+        this.$message.error('获取首页信息失败')
+      })
+    }
   }
 }
 </script>

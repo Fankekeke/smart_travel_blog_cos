@@ -17,10 +17,15 @@ let FEBS_REQUEST = axios.create({
 
 // 拦截请求
 FEBS_REQUEST.interceptors.request.use((config) => {
+  let token = store.state.account.token
+  if (typeof token !== 'string' || !token.length) {
+    const t = db.get('USER_TOKEN')
+    token = typeof t === 'string' ? t : ''
+  }
   let expireTime = store.state.account.expireTime
   let now = moment().format('YYYYMMDDHHmmss')
-  // 让token早10秒种过期，提升“请重新登录”弹窗体验
-  if (now - expireTime >= -10) {
+  // 让token早10秒种过期，提升“请重新登录”弹窗体验（仅已登录）
+  if (token && (typeof expireTime === 'string' || typeof expireTime === 'number') && now - expireTime >= -10) {
     Modal.error({
       title: '登录已过期',
       content: '很抱歉，登录已过期，请重新登录',
@@ -34,9 +39,8 @@ FEBS_REQUEST.interceptors.request.use((config) => {
       }
     })
   }
-  // 有 token就带上
-  if (store.state.account.token) {
-    config.headers.Authentication = store.state.account.token
+  if (token) {
+    config.headers.Authentication = token
   }
   return config
 }, (error) => {
