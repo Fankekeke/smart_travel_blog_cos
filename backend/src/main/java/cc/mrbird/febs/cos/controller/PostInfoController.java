@@ -140,6 +140,20 @@ public class PostInfoController {
     }
 
     /**
+     * 模糊查询
+     *
+     * @param key
+     * @param name
+     * @return
+     */
+    @GetMapping("/querySearch")
+    public R querySearch(@RequestParam(value = "key", required = false) String key,
+                         @RequestParam(value = "key", required = false) String name,
+                         @RequestParam(value = "vipFlag", required = false) String vipFlag) {
+        return R.ok(postInfoService.querySearch(key, name, vipFlag));
+    }
+
+    /**
      * 推荐贴子
      *
      * @param userId

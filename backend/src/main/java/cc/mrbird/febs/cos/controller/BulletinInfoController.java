@@ -25,6 +25,7 @@ public class BulletinInfoController {
 
     /**
      * 分页查询公告信息
+     *
      * @param page
      * @param bulletinInfo
      * @return
@@ -41,6 +42,7 @@ public class BulletinInfoController {
 
     /**
      * 新增公告信息
+     *
      * @param bulletinInfo
      * @return
      */
@@ -52,6 +54,7 @@ public class BulletinInfoController {
 
     /**
      * 修改公告信息
+     *
      * @param bulletinInfo
      * @return
      */
@@ -62,6 +65,7 @@ public class BulletinInfoController {
 
     /**
      * 删除公告信息
+     *
      * @param ids
      * @return
      */

@@ -222,6 +222,46 @@
         ORDER BY pi.create_date DESC
     </select>
 
+
+    <!-- 模糊查询帖子信息 -->
+    <select id="querySearch" resultType="java.util.LinkedHashMap">
+        SELECT
+            pi.id,
+            pi.title,
+            pi.content,
+            pi.images,
+            pi.user_id AS userId,
+            pi.create_date AS createDate,
+            pi.pageviews,
+            pi.tag_ids AS tagIds,
+            pi.delete_flag AS deleteFlag,
+            tu.AVATAR AS avatar,
+            ui.name as username,
+            ui.type as userType,
+            ui.images as userImages,
+            IFNULL(COUNT(distinct(ci.id)), 0) AS collect,
+            IFNULL(COUNT(ri.id), 0) AS reply
+        FROM
+            post_info pi
+                LEFT JOIN t_user tu ON ( tu.USER_ID = pi.user_id )
+                LEFT JOIN collect_info ci ON ( ci.post_id = pi.id ) AND ci.delete_flag = 0
+                LEFT JOIN reply_info ri ON ( ri.post_id = pi.id ) AND ri.delete_flag = 0
+                LEFT JOIN user_info ui ON (ui.user_id = tu.USER_ID)
+        WHERE
+            pi.delete_flag = 0
+        <if test="key != null and key != ''">
+            AND pi.title LIKE CONCAT('%',#{key},'%')
+        </if>
+        <if test="name != null and name != ''">
+            AND ui.name LIKE CONCAT('%',#{name},'%')
+        </if>
+        <if test="vipFlag != null and vipFlag != ''">
+            AND ui.type = #{vipFlag}
+        </if>
+        GROUP BY pi.id
+        ORDER BY pi.create_date DESC
+    </select>
+
     <!-- 模糊查询帖子信息 -->
     <select id="listByUser" resultType="java.util.LinkedHashMap">
         SELECT

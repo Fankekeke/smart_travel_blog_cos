@@ -46,6 +46,9 @@ public interface IPostInfoService extends IService<PostInfo> {
     // 模糊查询帖子信息
     List<LinkedHashMap<String, Object>> postByKey(String key);
 
+    // 搜索
+    List<LinkedHashMap<String, Object>> querySearch(String key, String name, String vipFlag);
+
     // 模糊查询帖子信息
     List<LinkedHashMap<String, Object>> listByUser(String key, Integer userId);
 

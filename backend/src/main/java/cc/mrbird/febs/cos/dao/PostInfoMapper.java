@@ -43,6 +43,9 @@ public interface PostInfoMapper extends BaseMapper<PostInfo> {
     List<LinkedHashMap<String, Object>> postByKey(@Param("key") String key);
 
     // 模糊查询帖子信息
+    List<LinkedHashMap<String, Object>> querySearch(@Param("key") String key, @Param("name") String name, @Param("vipFlag") String vipFlag);
+
+    // 模糊查询帖子信息
     List<LinkedHashMap<String, Object>> listByUser(@Param("key") String key, @Param("userId") Integer userId);
 
     // 推荐贴子
