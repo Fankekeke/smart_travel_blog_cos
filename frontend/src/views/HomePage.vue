@@ -1,5 +1,61 @@
 <template>
   <div :class="[multipage === true ? 'multi-page':'single-page', 'not-menu-page', 'home-page']" style="background-color: #e9f8e7; border: none">
+    <a-row class="head-info">
+      <a-card class="head-info-card" style="width: 65%;margin: 0 auto">
+        <a-col :span="16" style="margin-bottom: 15px">
+          <!--          <div class="search-bar" v-show="!postDetailShow">-->
+          <div style="padding: 30px 20px;background-color: #f1f1f1">
+            <div class="search-bar">
+              <a-checkbox v-model="searchVipFlag" class="search-checkbox">
+                仅看VIP用户
+              </a-checkbox>
+              <a-input
+                v-model="name"
+                placeholder="输入作者名称"
+                class="search-input"
+                allow-clear />
+              <a-input-search
+                placeholder="搜索贴子关键字"
+                class="search-input-search"
+                @search="onSearch" />
+            </div>
+          </div>
+        </a-col>
+        <a-col :span="8" style="padding-left: 25px">
+          <div class="head-info-count">
+            <div class="head-info-welcome">
+              {{welcomeMessage}}
+            </div>
+            <div class="head-info-desc" v-if="user.userId">
+              <p>{{user.roleName ? user.roleName : '暂无角色'}}</p>
+            </div>
+            <div class="head-info-desc" v-else>
+              <p><router-link to="/login">登录</router-link> 后可发帖、评论与收藏</p>
+            </div>
+            <div class="head-info-time" v-if="user.userId">上次登录时间：{{user.lastLoginTime ? user.lastLoginTime : '第一次访问系统'}}</div>
+          </div>
+          <div style="margin-top: 15px">
+            <a-row class="more-info">
+              <a-col :span="24">
+                <a-button type="default" v-if="user.userId" style="margin-right: 8px;display: inline" @click="goManage">
+                  进入后台
+                </a-button>
+                <a-button type="primary" v-if="user.userId && user.roleId != 76" @click="add" style="margin-right: 8px;display: inline">
+                  发帖子
+                </a-button>
+              </a-col>
+            </a-row>
+          </div>
+        </a-col>
+      </a-card>
+    </a-row>
+    <a-row :gutter="20" style="width: 66%;margin: 0 auto;margin-bottom: 15px">
+      <a-col :span="24">
+        <a-carousel effect="fade">
+          <div style="width: 100%;height: 350px" v-for="(item, index) in homeImage" :key="index"><img :src="'http://127.0.0.1:9527/imagesWeb/' + item" style="width: 100%;height: 100%;object-fit:cover;" /></div>
+        </a-carousel>
+      </a-col>
+    </a-row>
     <a-row v-if="newsList.length > 0" style="width: 65%;margin: 0 auto;margin-bottom: 15px">
       <a-col :span="22">
         <a-alert
@@ -12,14 +68,136 @@
         <a-button type="primary" style="margin-top: 2px;margin-left: 10px" @click="newsNext">下一页</a-button>
       </a-col>
     </a-row>
-    <a-row :gutter="20" style="width: 66%;margin: 0 auto;margin-bottom: 15px">
-      <a-col :span="17">
-        <a-carousel effect="fade">
-          <div style="width: 100%;height: 550px" v-for="(item, index) in homeImage" :key="index"><img :src="'http://127.0.0.1:9527/imagesWeb/' + item" style="width: 100%;height: 100%;object-fit:cover;" /></div>
-        </a-carousel>
-      </a-col>
-      <a-col :span="7">
-        <a-card hoverable :loading="loading" :bordered="false" title="景区推荐" style="height: 550px;overflow: auto">
+    <a-row :gutter="8" class="count-info">
+      <a-card class="head-info-card" style="width: 65%;margin: 0 auto">
+        <a-col :span="16">
+          <a-tabs :activeKey="tabKey" tab-position="top" @change="tabChange">
+            <a-tab-pane v-for="item in tagList" :key="item.id" :tab="item.name">
+              <a-skeleton active v-if="loading" />
+              <div v-if="!loading">
+                <a-list item-layout="vertical" size="large" :pagination="pagination" :data-source="postList"  v-show="!postDetailShow">
+                  <a-list-item slot="renderItem" key="item.title" slot-scope="item, index">
+                    <template slot="actions">
+                    <span key="message">
+                      <a-icon type="message" style="margin-right: 8px" />
+                      <span v-if="item.collect === 0">{{ item.reply }}</span>
+                      <span v-else>{{ item.reply / item.collect }}</span> 回复
+                    </span>
+                      <span key="star">
+                      <a-icon type="star" style="margin-right: 8px" />
+                      {{ item.collect }} 收藏
+                    </span>
+                      <span key="to-top">
+                      <a-icon type="to-top" style="margin-right: 8px" />
+                      {{ timeFormat(item.createDate) }}
+                    </span>
+                    </template>
+                    <a-list-item-meta :description="item.content.slice(0, 100) + '...'">
+                      <div slot="title" class="post-title-wrapper">
+                        <a @click="postReplyDetail(item)" class="post-title">{{ item.title }}</a>
+                        <a-tag v-if="item.userLevel" :color="getUserLevelColor(item.userLevel)" class="user-level-tag">
+                          {{ item.userLevel }}
+                        </a-tag>
+                      </div>
+                      <div slot="avatar" class="avatar-wrapper">
+                        <a-avatar shape="square" icon="user" :src="'http://127.0.0.1:9527/imagesWeb/' + item.userImages" />
+                      </div>
+                    </a-list-item-meta>
+                  </a-list-item>
+                </a-list>
+              </div>
+            </a-tab-pane>
+          </a-tabs>
+          <div v-if="postDetailShow && postDetail !== null" style="margin: 18px">
+            <div style="margin-bottom: 10px">
+              <a-breadcrumb>
+                <a-breadcrumb-item><a @click="postDetailShow = false">返回</a></a-breadcrumb-item>
+                <a-breadcrumb-item>{{ tabName }}</a-breadcrumb-item>
+              </a-breadcrumb>
+            </div>
+            <p style="font-size: 22px;color: black;font-weight: 500;line-height: 150%;margin: 25px 50px;margin-top: 50px">
+              {{ postDetail.title }}
+              <a-icon type="form" style="cursor: pointer" v-if="user.userId === postDetail.userId" @click="edit(postDetail)"/>
+            </p>
+            <div style="margin: 25px 50px;font-size: 13px">
+              <a-icon v-if="user.userId && user.roleId != 76 && collectUser === 0" type="heart" style="margin-right: 10px;cursor: pointer" @click="collectUserCheck(0)"/>
+              <a-icon v-if="user.userId && user.roleId != 76 && collectUser > 0" type="heart" style="margin-right: 10px;color: red;cursor: pointer" @click="collectUserCheck(1)"/>
+              <a @click="pushToDetail(postDetail.userId)">{{ postDetail.username }}</a> 关注
+              <a-divider type="vertical" />
+              <a-icon type="eye" style="margin-right: 10px;margin-left: 40px" />
+              {{ postDetail.pageviews }} 访问
+              <a-divider type="vertical" />
+              <a-icon type="message" style="margin-right: 10px" />
+              <span v-if="postDetail.collect === 0">{{ postDetail.reply }}</span>
+              <span v-else>{{ postDetail.reply / postDetail.collect }}</span> 回复
+              <a-divider type="vertical" />
+              <a-icon v-if="user.userId && user.roleId != 76 && collectPost === 0" type="star" style="margin-right: 10px;cursor: pointer" @click="collectPostCheck(0)"/>
+              <a-icon v-if="user.userId && user.roleId != 76 && collectPost > 0" type="star" style="margin-right: 10px;color: red;cursor: pointer" @click="collectPostCheck(1)"/>
+              {{ postDetail.collect }} 收藏
+              <a-divider type="vertical" />
+              {{ timeFormat(postDetail.createDate) }}
+            </div>
+            <div style="margin: 25px 50px;font-size: 15px;line-height: 1.6;word-break: break-word;letter-spacing: 1px;text-indent: 30px">
+              {{ postDetail.content }}
+            </div>
+            <div style="margin: 25px 50px;height: 100px">
+              <a-upload
+                name="avatar"
+                action="http://127.0.0.1:9527/file/fileUpload/"
+                list-type="picture-card"
+                :file-list="fileList"
+                @preview="handlePreview"
+              >
+              </a-upload>
+              <a-modal :visible="previewVisible" :footer="null" @cancel="handleCancel">
+                <img alt="example" style="width: 100%" :src="previewImage" />
+              </a-modal>
+            </div>
+            <div style="margin: 25px 50px;">
+              <a-list
+                class="comment-list"
+                :pagination="pagination"
+                :header="`${replyList.length} 回复`"
+                item-layout="horizontal"
+                :data-source="replyList"
+              >
+                <a-list-item slot="renderItem" slot-scope="item, index">
+                  <a-comment shape="square" @click="pushToDetail(item.userId)">
+                    <div slot="avatar" class="comment-avatar-wrapper">
+                      <a-avatar :src="'http://127.0.0.1:9527/imagesWeb/' + item.images" />
+                    </div>
+                    <div slot="author" class="comment-author-wrapper">
+                      <span class="comment-username">{{ item.username }}</span>
+                      <a-tag v-if="item.userLevel" :color="getUserLevelColor(item.userLevel)" class="comment-level-tag">
+                        {{ item.userLevel }}
+                      </a-tag>
+                    </div>
+                    <template slot="actions">
+                      <span @click.stop="replyUserAdd(item)">回复</span>
+                    </template>
+                    <p slot="content" style="white-space: pre-line;">
+                      {{ item.content }}
+                    </p>
+                    <a-tooltip slot="datetime" :title="item.sendCreate">
+                      <span>{{ timeFormat(item.sendCreate) }}</span>
+                    </a-tooltip>
+                  </a-comment>
+                </a-list-item>
+              </a-list>
+              <div style="margin-bottom: 200px;margin-top: 50px" v-if="user.userId && user.roleId != 76">
+                <a-textarea
+                  v-model="replyContent"
+                  placeholder="Controlled autosize"
+                  :rows="5"
+                />
+                <a-button type="primary" style="float: right;margin-top: 15px" @click="commit">
+                  提交
+                </a-button>
+              </div>
+            </div>
+          </div>
+        </a-col>
+        <a-col :span="8">
           <div style="padding: 0 22px">
             <a-list item-layout="vertical" :pagination="false" :data-source="bulletinList">
               <a-list-item slot="renderItem" key="item.title" slot-scope="item, index">
@@ -37,161 +215,7 @@
               </a-list-item>
             </a-list>
           </div>
-        </a-card>
-      </a-col>
-    </a-row>
-    <a-row :gutter="8" class="head-info">
-      <a-card class="head-info-card" style="width: 65%;margin: 0 auto">
-        <a-col :span="12">
-          <div class="head-info-count">
-            <div class="head-info-welcome">
-              {{welcomeMessage}}
-            </div>
-            <div class="head-info-desc" v-if="user.userId">
-              <p>{{user.roleName ? user.roleName : '暂无角色'}}</p>
-            </div>
-            <div class="head-info-desc" v-else>
-              <p><router-link to="/login">登录</router-link> 后可发帖、评论与收藏</p>
-            </div>
-            <div class="head-info-time" v-if="user.userId">上次登录时间：{{user.lastLoginTime ? user.lastLoginTime : '第一次访问系统'}}</div>
-          </div>
         </a-col>
-        <a-col :span="12">
-          <div>
-            <a-row class="more-info">
-              <a-col :span="4"></a-col>
-              <a-col :span="4"></a-col>
-              <a-col :span="4"></a-col>
-              <a-col :span="4"></a-col>
-              <a-col :span="8">
-                <a-button type="default" v-if="user.userId" style="margin-right: 8px;display: inline" @click="goManage">
-                  进入后台
-                </a-button>
-                <a-button type="primary" v-if="user.userId && user.roleId != 76" @click="add" style="margin-right: 8px;display: inline">
-                  发帖子
-                </a-button>
-              </a-col>
-            </a-row>
-          </div>
-        </a-col>
-      </a-card>
-    </a-row>
-    <a-row :gutter="8" class="count-info">
-      <a-card class="head-info-card" style="width: 65%;margin: 0 auto">
-        <a-row>
-          <a-col :span="24">
-            <a-input-search placeholder="搜索贴子" v-show="!postDetailShow" style="width: 200px;margin-top: 10px;float: right" @search="onSearch" />
-          </a-col>
-        </a-row>
-        <a-tabs :activeKey="tabKey" tab-position="top" @change="tabChange" v-show="!postDetailShow">
-          <a-tab-pane v-for="item in tagList" :key="item.id" :tab="item.name">
-            <a-skeleton active v-if="loading" />
-            <div v-if="!loading">
-              <a-list item-layout="vertical" size="large" :pagination="pagination" :data-source="postList">
-                <a-list-item slot="renderItem" key="item.title" slot-scope="item, index">
-                  <template slot="actions">
-                    <span key="message">
-                      <a-icon type="message" style="margin-right: 8px" />
-                      <span v-if="item.collect === 0">{{ item.reply }}</span>
-                      <span v-else>{{ item.reply / item.collect }}</span> 回复
-                    </span>
-                    <span key="star">
-                      <a-icon type="star" style="margin-right: 8px" />
-                      {{ item.collect }} 收藏
-                    </span>
-                    <span key="to-top">
-                      <a-icon type="to-top" style="margin-right: 8px" />
-                      {{ timeFormat(item.createDate) }}
-                    </span>
-                  </template>
-                  <a-list-item-meta :description="item.content.slice(0, 100) + '...'">
-                    <a slot="title" @click="postReplyDetail(item)">{{ item.title }}</a>
-                    <a-avatar shape="square" slot="avatar" icon="user" :src="'http://127.0.0.1:9527/imagesWeb/' + item.userImages" />
-                  </a-list-item-meta>
-                </a-list-item>
-              </a-list>
-            </div>
-          </a-tab-pane>
-        </a-tabs>
-        <div v-if="postDetailShow && postDetail !== null" style="margin: 18px">
-          <div style="margin-bottom: 10px">
-            <a-breadcrumb>
-              <a-breadcrumb-item><a @click="postDetailShow = false">返回</a></a-breadcrumb-item>
-              <a-breadcrumb-item>{{ tabName }}</a-breadcrumb-item>
-            </a-breadcrumb>
-          </div>
-          <p style="font-size: 22px;color: black;font-weight: 500;line-height: 150%;margin: 25px 50px;margin-top: 50px">
-            {{ postDetail.title }}
-            <a-icon type="form" style="cursor: pointer" v-if="user.userId === postDetail.userId" @click="edit(postDetail)"/>
-          </p>
-          <div style="margin: 25px 50px;font-size: 13px">
-            <a-icon v-if="user.userId && user.roleId != 76 && collectUser === 0" type="heart" style="margin-right: 10px;cursor: pointer" @click="collectUserCheck(0)"/>
-            <a-icon v-if="user.userId && user.roleId != 76 && collectUser > 0" type="heart" style="margin-right: 10px;color: red;cursor: pointer" @click="collectUserCheck(1)"/>
-            <a @click="pushToDetail(postDetail.userId)">{{ postDetail.username }}</a> 关注
-            <a-divider type="vertical" />
-            <a-icon type="eye" style="margin-right: 10px;margin-left: 40px" />
-            {{ postDetail.pageviews }} 访问
-            <a-divider type="vertical" />
-            <a-icon type="message" style="margin-right: 10px" />
-            <span v-if="postDetail.collect === 0">{{ postDetail.reply }}</span>
-            <span v-else>{{ postDetail.reply / postDetail.collect }}</span> 回复
-            <a-divider type="vertical" />
-            <a-icon v-if="user.userId && user.roleId != 76 && collectPost === 0" type="star" style="margin-right: 10px;cursor: pointer" @click="collectPostCheck(0)"/>
-            <a-icon v-if="user.userId && user.roleId != 76 && collectPost > 0" type="star" style="margin-right: 10px;color: red;cursor: pointer" @click="collectPostCheck(1)"/>
-            {{ postDetail.collect }} 收藏
-            <a-divider type="vertical" />
-            {{ timeFormat(postDetail.createDate) }}
-          </div>
-          <div style="margin: 25px 50px;font-size: 15px;line-height: 1.6;word-break: break-word;letter-spacing: 1px;text-indent: 30px">
-            {{ postDetail.content }}
-          </div>
-          <div style="margin: 25px 50px;height: 100px">
-            <a-upload
-              name="avatar"
-              action="http://127.0.0.1:9527/file/fileUpload/"
-              list-type="picture-card"
-              :file-list="fileList"
-              @preview="handlePreview"
-            >
-            </a-upload>
-            <a-modal :visible="previewVisible" :footer="null" @cancel="handleCancel">
-              <img alt="example" style="width: 100%" :src="previewImage" />
-            </a-modal>
-          </div>
-          <div style="margin: 25px 50px;">
-            <a-list
-              class="comment-list"
-              :pagination="pagination"
-              :header="`${replyList.length} 回复`"
-              item-layout="horizontal"
-              :data-source="replyList"
-            >
-              <a-list-item slot="renderItem" slot-scope="item, index">
-                <a-comment :author="item.username" shape="square" :avatar="'http://127.0.0.1:9527/imagesWeb/' + item.images" @click="pushToDetail(item.userId)">
-                  <template slot="actions">
-                    <span @click="replyUserAdd(item)">回复</span>
-                  </template>
-                  <p slot="content" style="white-space: pre-line;">
-                    {{ item.content }}
-                  </p>
-                  <a-tooltip slot="datetime" :title="item.sendCreate">
-                    <span>{{ timeFormat(item.sendCreate) }}</span>
-                  </a-tooltip>
-                </a-comment>
-              </a-list-item>
-            </a-list>
-            <div style="margin-bottom: 200px;margin-top: 50px" v-if="user.userId && user.roleId != 76">
-              <a-textarea
-                v-model="replyContent"
-                placeholder="Controlled autosize"
-                :rows="5"
-              />
-              <a-button type="primary" style="float: right;margin-top: 15px" @click="commit">
-                提交
-              </a-button>
-            </div>
-          </div>
-        </div>
       </a-card>
     </a-row>
     <post-add
@@ -237,6 +261,8 @@ export default {
   components: {ClothesView, HeadInfo, PostAdd, PostEdit},
   data () {
     return {
+      searchVipFlag: false,
+      name: null,
       newsPage: 0,
       newsContent: '',
       newsList: [],
@@ -566,20 +592,39 @@ export default {
       this.newsContent = `《${this.newsList[this.newsPage].title}》 ${this.newsList[this.newsPage].content}`
     },
     onSearch (key) {
-      if (key !== '') {
+      if (key !== '' || this.name !== '' || this.searchVipFlag) {
         this.loading = true
         if (this.tagList[this.tagList.length - 1].id !== 9999) {
           this.tagList.push({id: 9999, name: '搜索'})
         }
         this.tabKey = 9999
         this.tabName = '搜索'
-        this.$get(`/cos/post-info/list/${key}`).then((r) => {
-          this.postList = r.data.data
+
+        const searchParams = {
+          key: key || null,
+          name: this.name || null,
+          vipFlag: this.searchVipFlag ? '大V用户' : null
+        }
+
+        this.$get('/cos/post-info/querySearch', searchParams).then((r) => {
+          this.postList = r.data.data || []
           setTimeout(() => {
             this.loading = false
           }, 500)
+        }).catch(() => {
+          this.loading = false
         })
+      } else {
+        this.$message.warning('请输入搜索条件')
       }
+    },
+    getUserLevelColor (level) {
+      const levelMap = {
+        '小白用户': 'blue',
+        '高级用户': 'green',
+        '大V用户': 'orange'
+      }
+      return levelMap[level] || 'default'
     }
   },
   mounted () {
@@ -660,7 +705,7 @@ export default {
 
   // 景区推荐卡片
   .scenic-recommend-card {
-    height: 550px;
+    height: 350px;
     overflow-y: auto;
 
     .ant-card-head {
@@ -915,6 +960,213 @@ export default {
     .ant-alert-message {
       font-weight: 500;
       color: #2e7d32;
+    }
+  }
+}
+
+// 搜索框美化
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f8fdf7 0%, #e8f5e9 100%);
+  border-radius: 8px;
+  border: 1px solid #c8e6c9;
+  margin-top: 10px;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.08);
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+    border-color: #81c784;
+  }
+
+  .search-checkbox {
+    color: #2e7d32;
+    font-weight: 500;
+    white-space: nowrap;
+
+    ::v-deep .ant-checkbox-checked .ant-checkbox-inner {
+      background-color: #4CAF50;
+      border-color: #4CAF50;
+    }
+
+    ::v-deep .ant-checkbox:hover .ant-checkbox-inner {
+      border-color: #4CAF50;
+    }
+  }
+
+  .search-input {
+    flex: 0 0 180px;
+
+    ::v-deep .ant-input {
+      border-radius: 20px;
+      border: 1px solid #c8e6c9;
+      transition: all 0.3s;
+
+      &:focus {
+        border-color: #4CAF50;
+        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+      }
+
+      &::placeholder {
+        color: #a5d6a7;
+      }
+    }
+  }
+
+  .search-input-search {
+    flex: 0 0 220px;
+
+    ::v-deep .ant-input {
+      border-radius: 20px 0 0 20px;
+      border-right: none;
+      border-color: #c8e6c9;
+
+      &:focus {
+        border-color: #4CAF50;
+        box-shadow: none;
+      }
+    }
+
+    ::v-deep .ant-input-search-button {
+      border-radius: 0 20px 20px 0;
+      background: linear-gradient(135deg, #4CAF50, #66bb6a);
+      border-color: #4CAF50;
+      color: white;
+      transition: all 0.3s;
+
+      &:hover {
+        background: linear-gradient(135deg, #43a047, #4CAF50);
+        border-color: #43a047;
+      }
+    }
+  }
+}
+
+// 列表项美化
+.ant-list-item {
+  padding: 1.2rem 1.5rem !important;
+  border-bottom: 1px solid #f0f0f0;
+  transition: all 0.3s;
+  border-radius: 8px;
+  margin-bottom: 12px;
+
+  &:hover {
+    background: #f1f8e9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+  }
+
+  .ant-list-item-action {
+    li {
+      span {
+        display: flex;
+        align-items: center;
+        color: #66bb6a;
+        font-size: 0.9rem;
+
+        .anticon {
+          margin-right: 5px;
+        }
+      }
+    }
+  }
+
+  .post-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+
+    .post-title {
+      color: #2e7d32;
+      font-weight: 500;
+      font-size: 1.1rem;
+      transition: color 0.3s;
+      cursor: pointer;
+
+      &:hover {
+        color: #4CAF50;
+      }
+    }
+
+    .user-level-tag {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 500;
+      margin-left: 4px;
+    }
+  }
+
+  .avatar-wrapper {
+    display: flex;
+    align-items: center;
+  }
+
+  .ant-list-item-meta-description {
+    color: #757575;
+    line-height: 1.6;
+  }
+}
+
+.comment-list {
+  .ant-list-header {
+    background: #e8f5e9;
+    border-radius: 8px 8px 0 0;
+    font-weight: 500;
+    color: #2e7d32;
+  }
+
+  .ant-comment {
+    padding: 1rem 0;
+    border-bottom: 1px solid #eee;
+
+    .comment-avatar-wrapper {
+      cursor: pointer;
+      transition: transform 0.3s;
+
+      &:hover {
+        transform: scale(1.1);
+      }
+    }
+
+    .comment-author-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+
+      .comment-username {
+        color: #2e7d32;
+        font-weight: 500;
+        cursor: pointer;
+        transition: color 0.3s;
+
+        &:hover {
+          color: #4CAF50;
+        }
+      }
+
+      .comment-level-tag {
+        font-size: 0.7rem;
+        padding: 1px 6px;
+        border-radius: 8px;
+        font-weight: 500;
+      }
+    }
+
+    .ant-comment-content {
+      background: #f1f8e9;
+      padding: 1rem;
+      border-radius: 8px;
+
+      .ant-comment-author-time {
+        color: #9e9e9e;
+        font-size: 0.85rem;
+      }
     }
   }
 }

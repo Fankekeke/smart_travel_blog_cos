@@ -10,6 +10,8 @@ import cc.mrbird.febs.common.exception.FebsException;
 import cc.mrbird.febs.common.properties.FebsProperties;
 import cc.mrbird.febs.common.service.RedisService;
 import cc.mrbird.febs.common.utils.*;
+import cc.mrbird.febs.cos.entity.UserInfo;
+import cc.mrbird.febs.cos.service.IUserInfoService;
 import cc.mrbird.febs.system.dao.LoginLogMapper;
 import cc.mrbird.febs.system.domain.LoginLog;
 import cc.mrbird.febs.system.domain.User;
@@ -18,6 +20,7 @@ import cc.mrbird.febs.system.manager.UserManager;
 import cc.mrbird.febs.system.service.LoginLogService;
 import cc.mrbird.febs.system.service.UserService;
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
@@ -48,6 +51,9 @@ public class LoginController {
     private FebsProperties properties;
     @Autowired
     private ObjectMapper mapper;
+
+    @Autowired
+    private IUserInfoService userInfoService;
 
     @PostMapping("/login")
     @Limit(key = "login", period = 60, count = 20, name = "登录接口", prefix = "limit")
@@ -81,6 +87,13 @@ public class LoginController {
 
         String userId = this.saveTokenToRedis(user, jwtToken, request);
         user.setId(userId);
+
+        UserInfo userInfo1 = userInfoService.getOne(Wrappers.<UserInfo>lambdaQuery().eq(UserInfo::getUserId, user.getUserId()));
+        if (userInfo1 != null) {
+            user.setUserInfoId(userInfo1.getId());
+        } else {
+            user.setUserInfoId(null);
+        }
 
         Map<String, Object> userInfo = this.generateUserInfo(jwtToken, user);
         return new FebsResponse().message("认证成功").data(userInfo);
